@@ -10,6 +10,9 @@
   --success: #15803d;
   --success-soft: #eafaf0;
   --success-border: #bfe8cf;
+  --error: #b91c1c;
+  --error-soft: #fdecec;
+  --error-border: #f3c6c6;
 }
 
 html {
