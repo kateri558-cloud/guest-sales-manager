@@ -83,7 +83,13 @@ export default function MonthlyListView() {
                 <div>
                   <div className={styles.metricRow}>
                     <span className={styles.metricLabel}>月受注売上</span>
-                    <span className={styles.metricValue}>{formatYen(item.orderSales)}</span>
+                    <span
+                      className={
+                        item.orderSales === null ? styles.emptyValue : styles.metricValue
+                      }
+                    >
+                      {item.orderSales === null ? "未入力" : formatYen(item.orderSales)}
+                    </span>
                   </div>
                   <YoYSummary yoy={item.orderSalesYoY} />
                 </div>
