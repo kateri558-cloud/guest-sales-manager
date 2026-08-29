@@ -75,6 +75,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+.emptyValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--muted);
+  font-style: italic;
+}
+
 .yoyRow {
   display: flex;
   justify-content: flex-end;

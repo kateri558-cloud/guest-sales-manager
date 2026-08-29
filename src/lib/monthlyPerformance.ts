@@ -4,8 +4,8 @@
 export interface MonthlyPerformanceRecord {
   /** 対象年月 (YYYY-MM 形式) */
   yearMonth: string;
-  /** 月受注売上 (円) */
-  orderSales: number;
+  /** 月受注売上 (円)。未入力の場合はnull */
+  orderSales: number | null;
   /** 男性 施工着数 (件) */
   maleCount: number;
   /** 男性 施工売上 (円) */
@@ -18,7 +18,7 @@ export interface MonthlyPerformanceRecord {
 
 interface MonthlyPerformanceRow {
   year_month: string;
-  order_sales: number;
+  order_sales: number | null;
   male_count: number;
   male_sales: number;
   female_count: number;
@@ -57,6 +57,10 @@ export const recordToRow = (record: MonthlyPerformanceRecord): MonthlyPerformanc
 const isNonNegativeInteger = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= 0;
 
+/** 月受注売上は「未入力」を表すnullも許可する */
+const isNonNegativeIntegerOrNull = (value: unknown): value is number | null =>
+  value === null || isNonNegativeInteger(value);
+
 /** POSTリクエストのボディを検証し、型付きのレコードに変換する */
 export const parseMonthlyPerformancePayload = (
   body: unknown
@@ -71,8 +75,11 @@ export const parseMonthlyPerformancePayload = (
     return { ok: false, error: "年月の形式が不正です（YYYY-MM）。" };
   }
 
-  const numericFields: (keyof Omit<MonthlyPerformanceRecord, "yearMonth">)[] = [
-    "orderSales",
+  if (!isNonNegativeIntegerOrNull(candidate.orderSales)) {
+    return { ok: false, error: "orderSalesは未入力(null)か、0以上の整数で入力してください。" };
+  }
+
+  const numericFields: (keyof Omit<MonthlyPerformanceRecord, "yearMonth" | "orderSales">)[] = [
     "maleCount",
     "maleSales",
     "femaleCount",
@@ -89,7 +96,7 @@ export const parseMonthlyPerformancePayload = (
     ok: true,
     data: {
       yearMonth: candidate.yearMonth,
-      orderSales: candidate.orderSales as number,
+      orderSales: candidate.orderSales as number | null,
       maleCount: candidate.maleCount as number,
       maleSales: candidate.maleSales as number,
       femaleCount: candidate.femaleCount as number,
@@ -113,18 +120,26 @@ export const previousYearMonth = (yearMonth: string): string => {
 export interface YoYComparison {
   /** 前年同月のデータが存在するか */
   hasPrevious: boolean;
-  /** 前年差 (当年 - 前年)。前年データが無い場合はnull */
+  /** 前年差 (当年 - 前年)。前年データが無い、または当年・前年のいずれかが未入力の場合はnull */
   diff: number | null;
-  /** 前年比 (当年 / 前年 * 100)。前年データが無い、または前年値が0の場合はnull */
+  /** 前年比 (当年 / 前年 * 100)。前年データが無い、未入力、または前年値が0の場合はnull */
   ratioPercent: number | null;
 }
 
+/**
+ * 当年・前年の値から前年差・前年比を計算する。
+ * current/previousのどちらかがnull（未入力）、またはpreviousが未登録(undefined)の場合は
+ * diff・ratioPercentともにnull（画面では「－」として表示する）。
+ */
 export const computeYoY = (
-  current: number,
-  previous: number | undefined
+  current: number | null,
+  previous: number | null | undefined
 ): YoYComparison => {
   if (previous === undefined) {
     return { hasPrevious: false, diff: null, ratioPercent: null };
+  }
+  if (current === null || previous === null) {
+    return { hasPrevious: true, diff: null, ratioPercent: null };
   }
   return {
     hasPrevious: true,

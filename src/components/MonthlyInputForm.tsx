@@ -32,7 +32,7 @@ type SaveResult =
 const recordToFormFields = (
   record: MonthlyPerformanceRecord
 ): Omit<MonthlySalesFormData, "yearMonth"> => ({
-  orderSales: String(record.orderSales),
+  orderSales: record.orderSales === null ? "" : String(record.orderSales),
   maleCount: String(record.maleCount),
   maleSales: String(record.maleSales),
   femaleCount: String(record.femaleCount),
@@ -121,7 +121,7 @@ export default function MonthlyInputForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           yearMonth: formData.yearMonth,
-          orderSales: toNumber(formData.orderSales),
+          orderSales: formData.orderSales === "" ? null : toNumber(formData.orderSales),
           maleCount: toNumber(formData.maleCount),
           maleSales: toNumber(formData.maleSales),
           femaleCount: toNumber(formData.femaleCount),
