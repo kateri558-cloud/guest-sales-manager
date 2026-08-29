@@ -12,3 +12,13 @@ export const formatNumber = (value: number): string =>
 
 /** 円表示のフォーマット。 */
 export const formatYen = (value: number): string => `¥${formatNumber(value)}`;
+
+/** 符号付きの円表示（前年差など増減を表すときに使う）。 */
+export const formatSignedYen = (value: number): string => {
+  if (value > 0) return `+¥${formatNumber(value)}`;
+  if (value < 0) return `-¥${formatNumber(Math.abs(value))}`;
+  return formatYen(0);
+};
+
+/** 前年比などのパーセント表示。小数第1位まで。 */
+export const formatPercent = (value: number): string => `${value.toFixed(1)}%`;

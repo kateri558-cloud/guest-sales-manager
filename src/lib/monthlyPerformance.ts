@@ -97,3 +97,74 @@ export const parseMonthlyPerformancePayload = (
     },
   };
 };
+
+/** "2026-08" -> "2026年8月" (画面表示用) */
+export const formatYearMonthLabel = (yearMonth: string): string => {
+  const [year, month] = yearMonth.split("-");
+  return `${year}年${Number(month)}月`;
+};
+
+/** "2026-08" -> "2025-08" (前年同月のキー) */
+export const previousYearMonth = (yearMonth: string): string => {
+  const [year, month] = yearMonth.split("-");
+  return `${Number(year) - 1}-${month}`;
+};
+
+export interface YoYComparison {
+  /** 前年同月のデータが存在するか */
+  hasPrevious: boolean;
+  /** 前年差 (当年 - 前年)。前年データが無い場合はnull */
+  diff: number | null;
+  /** 前年比 (当年 / 前年 * 100)。前年データが無い、または前年値が0の場合はnull */
+  ratioPercent: number | null;
+}
+
+export const computeYoY = (
+  current: number,
+  previous: number | undefined
+): YoYComparison => {
+  if (previous === undefined) {
+    return { hasPrevious: false, diff: null, ratioPercent: null };
+  }
+  return {
+    hasPrevious: true,
+    diff: current - previous,
+    ratioPercent: previous === 0 ? null : (current / previous) * 100,
+  };
+};
+
+export interface MonthlyPerformanceListItem extends MonthlyPerformanceRecord {
+  /** 男性 + 女性 の施工着数合計 */
+  totalCount: number;
+  /** 男性 + 女性 の施工売上合計 */
+  totalSales: number;
+  orderSalesYoY: YoYComparison;
+  totalSalesYoY: YoYComparison;
+}
+
+/** 月次レコードの配列から、施工着数合計・施工売上合計・前年比較を付与した一覧を作る（新しい月が先頭）。 */
+export const buildMonthlyPerformanceList = (
+  records: MonthlyPerformanceRecord[]
+): MonthlyPerformanceListItem[] => {
+  const byYearMonth = new Map(records.map((record) => [record.yearMonth, record]));
+
+  return records
+    .slice()
+    .sort((a, b) => (a.yearMonth < b.yearMonth ? 1 : a.yearMonth > b.yearMonth ? -1 : 0))
+    .map((record) => {
+      const totalCount = record.maleCount + record.femaleCount;
+      const totalSales = record.maleSales + record.femaleSales;
+      const previous = byYearMonth.get(previousYearMonth(record.yearMonth));
+      const previousTotalSales = previous
+        ? previous.maleSales + previous.femaleSales
+        : undefined;
+
+      return {
+        ...record,
+        totalCount,
+        totalSales,
+        orderSalesYoY: computeYoY(record.orderSales, previous?.orderSales),
+        totalSalesYoY: computeYoY(totalSales, previousTotalSales),
+      };
+    });
+};

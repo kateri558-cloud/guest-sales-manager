@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import styles from "./MonthlyInputForm.module.css";
 import {
   createEmptyMonthlySalesFormData,
@@ -160,6 +161,9 @@ export default function MonthlyInputForm() {
         <header className={styles.header}>
           <h1 className={styles.title}>参列売上管理</h1>
           <p className={styles.subtitle}>月次入力</p>
+          <Link href="/monthly-list" className={styles.navLink}>
+            月別一覧を見る →
+          </Link>
         </header>
 
         <form className={styles.form} onSubmit={handleSubmit}>
