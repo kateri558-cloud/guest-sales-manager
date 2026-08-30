@@ -29,7 +29,9 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase
     .from("half_year_snapshots")
-    .select("snapshot_date, fiscal_year, male_qty, male_sales, female_qty, female_sales")
+    .select(
+      "snapshot_date, fiscal_year, half_period, male_qty, male_sales, female_qty, female_sales"
+    )
     .eq("snapshot_date", snapshotDate)
     .maybeSingle();
 
@@ -66,7 +68,9 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase
     .from("half_year_snapshots")
     .upsert(recordToRow(parsed.data), { onConflict: "snapshot_date" })
-    .select("snapshot_date, fiscal_year, male_qty, male_sales, female_qty, female_sales")
+    .select(
+      "snapshot_date, fiscal_year, half_period, male_qty, male_sales, female_qty, female_sales"
+    )
     .single();
 
   if (error) {

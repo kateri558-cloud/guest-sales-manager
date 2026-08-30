@@ -166,7 +166,7 @@ export default function MonthlyInputForm() {
               月別一覧を見る →
             </Link>
             <Link href="/half-year-progress" className={styles.navLink}>
-              上期進捗を見る →
+              施工月ベース進捗を見る →
             </Link>
           </div>
         </header>

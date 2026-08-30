@@ -3,11 +3,27 @@
 
 import { computeYoY, type YoYComparison } from "@/lib/yoy";
 
+export type HalfPeriod = "h1" | "h2";
+
+export const HALF_PERIOD_LABELS: Record<HalfPeriod, string> = {
+  h1: "上期",
+  h2: "下期",
+};
+
+/** 半期の表示ラベル。half_periodが未設定(null)の既存データは「未設定」と表示する */
+export const formatHalfPeriodLabel = (halfPeriod: HalfPeriod | null): string =>
+  halfPeriod === null ? "未設定" : HALF_PERIOD_LABELS[halfPeriod];
+
+export const isValidHalfPeriod = (value: unknown): value is HalfPeriod =>
+  value === "h1" || value === "h2";
+
 export interface HalfYearSnapshotRecord {
   /** スナップショット日 (YYYY-MM-DD 形式) */
   snapshotDate: string;
   /** 期（西暦4桁、例: 2026） */
   fiscalYear: number;
+  /** 半期。旧データ（half_period未設定）はnull */
+  halfPeriod: HalfPeriod | null;
   /** 男性用 着数（モーニング・紋付・シャツ・小物） */
   maleQty: number;
   /** 男性用 売上（円） */
@@ -21,6 +37,7 @@ export interface HalfYearSnapshotRecord {
 interface HalfYearSnapshotRow {
   snapshot_date: string;
   fiscal_year: number;
+  half_period: string | null;
   male_qty: number;
   male_sales: number;
   female_qty: number;
@@ -45,6 +62,7 @@ export const formatSnapshotDateLabel = (snapshotDate: string): string =>
 export const rowToRecord = (row: HalfYearSnapshotRow): HalfYearSnapshotRecord => ({
   snapshotDate: row.snapshot_date,
   fiscalYear: row.fiscal_year,
+  halfPeriod: isValidHalfPeriod(row.half_period) ? row.half_period : null,
   maleQty: row.male_qty,
   maleSales: row.male_sales,
   femaleQty: row.female_qty,
@@ -54,6 +72,7 @@ export const rowToRecord = (row: HalfYearSnapshotRow): HalfYearSnapshotRecord =>
 export const recordToRow = (record: HalfYearSnapshotRecord): HalfYearSnapshotRow => ({
   snapshot_date: record.snapshotDate,
   fiscal_year: record.fiscalYear,
+  half_period: record.halfPeriod,
   male_qty: record.maleQty,
   male_sales: record.maleSales,
   female_qty: record.femaleQty,
@@ -81,12 +100,14 @@ export const parseHalfYearSnapshotPayload = (
     return { ok: false, error: "期は西暦4桁の整数で入力してください。" };
   }
 
-  const numericFields: (keyof Omit<HalfYearSnapshotRecord, "snapshotDate" | "fiscalYear">)[] = [
-    "maleQty",
-    "maleSales",
-    "femaleQty",
-    "femaleSales",
-  ];
+  if (!isValidHalfPeriod(candidate.halfPeriod)) {
+    return { ok: false, error: "半期は上期・下期のいずれかを選択してください。" };
+  }
+
+  const numericFields: (keyof Omit<
+    HalfYearSnapshotRecord,
+    "snapshotDate" | "fiscalYear" | "halfPeriod"
+  >)[] = ["maleQty", "maleSales", "femaleQty", "femaleSales"];
 
   for (const field of numericFields) {
     if (!isNonNegativeInteger(candidate[field])) {
@@ -99,6 +120,7 @@ export const parseHalfYearSnapshotPayload = (
     data: {
       snapshotDate: candidate.snapshotDate,
       fiscalYear: candidate.fiscalYear,
+      halfPeriod: candidate.halfPeriod,
       maleQty: candidate.maleQty as number,
       maleSales: candidate.maleSales as number,
       femaleQty: candidate.femaleQty as number,
@@ -116,42 +138,55 @@ export interface HalfYearSnapshotListItem extends HalfYearSnapshotRecord {
   maleUnitPrice: number | null;
   /** 女性用単価 (female_sales / female_qty)。female_qtyが0の場合はnull */
   femaleUnitPrice: number | null;
-  /** 同一fiscal_year内で直前のスナップショットからの売上増加額。直前が無い場合はnull */
-  increaseFromPrevious: number | null;
-  /** 前年（fiscal_year - 1）の同じ月のスナップショットとの比較 */
+  /** 同一「期＋半期」内で直前のスナップショットとの比較。半期が未設定の場合は比較不可 */
+  previousSnapshotComparison: YoYComparison;
+  /** 前年（fiscal_year - 1）の同じ半期・同じ月のスナップショットとの比較 */
   previousYearSameMonth: YoYComparison;
-  /** 前年度の最終スナップショット（fiscal_year - 1で最も新しい日付）まで、あと必要な売上額。前年データが無い場合はnull */
+  /** 前年度の最終スナップショット（fiscal_year - 1の同じ半期で最も新しい日付）まで、あと必要な売上額。無い場合はnull */
   remainingToLastYearFinal: number | null;
 }
 
 const totalSalesOf = (record: HalfYearSnapshotRecord): number =>
   record.maleSales + record.femaleSales;
 
+const fiscalYearHalfKey = (fiscalYear: number, halfPeriod: HalfPeriod): string =>
+  `${fiscalYear}:${halfPeriod}`;
+
 /**
  * スナップショットの配列から、合計・単価・前回比較・前年比較・前年最終実績までの差を付与した
  * 一覧を作る（新しい日付が先頭）。
+ *
+ * 前回比較・前年同時期比較・前年最終実績は、いずれも「同じ期(fiscal_year)＋同じ半期(half_period)」
+ * の中だけで完結させ、上期と下期の数字を混ぜない。half_periodが未設定(null)のスナップショットは
+ * どのグループにも属させず、比較対象としても使わない（比較結果は「－」になる）。
  */
 export const buildHalfYearSnapshotList = (
   records: HalfYearSnapshotRecord[]
 ): HalfYearSnapshotListItem[] => {
   const sorted = records.slice().sort((a, b) => a.snapshotDate.localeCompare(b.snapshotDate));
 
-  // fiscal_year ごとに日付昇順でグループ化（同一期内の直前スナップショット・前年度の最終実績を求めるため）
-  const byFiscalYear = new Map<number, HalfYearSnapshotRecord[]>();
+  // 「期＋半期」ごとに日付昇順でグループ化（half_periodが分かるものだけ）
+  const byFiscalYearAndHalf = new Map<string, HalfYearSnapshotRecord[]>();
   for (const record of sorted) {
-    const list = byFiscalYear.get(record.fiscalYear);
+    if (record.halfPeriod === null) continue;
+    const key = fiscalYearHalfKey(record.fiscalYear, record.halfPeriod);
+    const list = byFiscalYearAndHalf.get(key);
     if (list) {
       list.push(record);
     } else {
-      byFiscalYear.set(record.fiscalYear, [record]);
+      byFiscalYearAndHalf.set(key, [record]);
     }
   }
 
-  // 「fiscal_year + 月」で前年同時期を引けるようにする
-  const byFiscalYearAndMonth = new Map<string, HalfYearSnapshotRecord>();
+  // 「期＋半期＋月」で前年同時期を引けるようにする
+  const byFiscalYearHalfAndMonth = new Map<string, HalfYearSnapshotRecord>();
   for (const record of sorted) {
+    if (record.halfPeriod === null) continue;
     const month = record.snapshotDate.slice(5, 7);
-    byFiscalYearAndMonth.set(`${record.fiscalYear}-${month}`, record);
+    byFiscalYearHalfAndMonth.set(
+      `${fiscalYearHalfKey(record.fiscalYear, record.halfPeriod)}:${month}`,
+      record
+    );
   }
 
   const items = sorted.map((record): HalfYearSnapshotListItem => {
@@ -160,27 +195,46 @@ export const buildHalfYearSnapshotList = (
     const maleUnitPrice = record.maleQty > 0 ? record.maleSales / record.maleQty : null;
     const femaleUnitPrice = record.femaleQty > 0 ? record.femaleSales / record.femaleQty : null;
 
-    const sameFiscalYearList = byFiscalYear.get(record.fiscalYear) ?? [];
-    const indexInFiscalYear = sameFiscalYearList.findIndex(
+    if (record.halfPeriod === null) {
+      return {
+        ...record,
+        totalQty,
+        totalSales,
+        maleUnitPrice,
+        femaleUnitPrice,
+        previousSnapshotComparison: computeYoY(totalSales, undefined),
+        previousYearSameMonth: computeYoY(totalSales, undefined),
+        remainingToLastYearFinal: null,
+      };
+    }
+
+    const sameGroupList = byFiscalYearAndHalf.get(
+      fiscalYearHalfKey(record.fiscalYear, record.halfPeriod)
+    ) ?? [];
+    const indexInGroup = sameGroupList.findIndex(
       (item) => item.snapshotDate === record.snapshotDate
     );
-    const previousSnapshot =
-      indexInFiscalYear > 0 ? sameFiscalYearList[indexInFiscalYear - 1] : undefined;
-    const increaseFromPrevious = previousSnapshot
-      ? totalSales - totalSalesOf(previousSnapshot)
-      : null;
+    const previousSnapshot = indexInGroup > 0 ? sameGroupList[indexInGroup - 1] : undefined;
+    const previousSnapshotComparison = computeYoY(
+      totalSales,
+      previousSnapshot ? totalSalesOf(previousSnapshot) : undefined
+    );
 
     const month = record.snapshotDate.slice(5, 7);
-    const previousYearSnapshot = byFiscalYearAndMonth.get(`${record.fiscalYear - 1}-${month}`);
+    const previousYearSnapshot = byFiscalYearHalfAndMonth.get(
+      `${fiscalYearHalfKey(record.fiscalYear - 1, record.halfPeriod)}:${month}`
+    );
     const previousYearSameMonth = computeYoY(
       totalSales,
       previousYearSnapshot ? totalSalesOf(previousYearSnapshot) : undefined
     );
 
-    const previousFiscalYearList = byFiscalYear.get(record.fiscalYear - 1);
+    const previousFiscalYearHalfList = byFiscalYearAndHalf.get(
+      fiscalYearHalfKey(record.fiscalYear - 1, record.halfPeriod)
+    );
     const previousFiscalYearFinal =
-      previousFiscalYearList && previousFiscalYearList.length > 0
-        ? previousFiscalYearList[previousFiscalYearList.length - 1]
+      previousFiscalYearHalfList && previousFiscalYearHalfList.length > 0
+        ? previousFiscalYearHalfList[previousFiscalYearHalfList.length - 1]
         : undefined;
     const remainingToLastYearFinal = previousFiscalYearFinal
       ? totalSalesOf(previousFiscalYearFinal) - totalSales
@@ -192,7 +246,7 @@ export const buildHalfYearSnapshotList = (
       totalSales,
       maleUnitPrice,
       femaleUnitPrice,
-      increaseFromPrevious,
+      previousSnapshotComparison,
       previousYearSameMonth,
       remainingToLastYearFinal,
     };
