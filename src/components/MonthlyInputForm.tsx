@@ -212,10 +212,10 @@ export default function MonthlyInputForm() {
           </section>
 
           <section className={styles.section}>
-            <span className={styles.sectionLabel}>男性</span>
+            <span className={styles.sectionLabel}>男性用</span>
             <div className={styles.row}>
               <div className={styles.field}>
-                <label htmlFor="maleCount">施工着数（件）</label>
+                <label htmlFor="maleCount">着数（件）</label>
                 <input
                   id="maleCount"
                   type="text"
@@ -229,7 +229,7 @@ export default function MonthlyInputForm() {
                 />
               </div>
               <div className={styles.field}>
-                <label htmlFor="maleSales">施工売上（円）</label>
+                <label htmlFor="maleSales">売上（円）</label>
                 <input
                   id="maleSales"
                   type="text"
@@ -246,10 +246,10 @@ export default function MonthlyInputForm() {
           </section>
 
           <section className={styles.section}>
-            <span className={styles.sectionLabel}>女性</span>
+            <span className={styles.sectionLabel}>女性用</span>
             <div className={styles.row}>
               <div className={styles.field}>
-                <label htmlFor="femaleCount">施工着数（件）</label>
+                <label htmlFor="femaleCount">着数（件）</label>
                 <input
                   id="femaleCount"
                   type="text"
@@ -263,7 +263,7 @@ export default function MonthlyInputForm() {
                 />
               </div>
               <div className={styles.field}>
-                <label htmlFor="femaleSales">施工売上（円）</label>
+                <label htmlFor="femaleSales">売上（円）</label>
                 <input
                   id="femaleSales"
                   type="text"
