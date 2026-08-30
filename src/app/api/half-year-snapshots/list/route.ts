@@ -15,7 +15,9 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("half_year_snapshots")
-    .select("snapshot_date, fiscal_year, male_qty, male_sales, female_qty, female_sales")
+    .select(
+      "snapshot_date, fiscal_year, half_period, male_qty, male_sales, female_qty, female_sales"
+    )
     .order("snapshot_date", { ascending: true });
 
   if (error) {

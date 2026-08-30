@@ -74,7 +74,8 @@
   color: var(--foreground);
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   font-size: 20px;
   padding: 14px 16px;
@@ -86,7 +87,8 @@
   appearance: none;
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);

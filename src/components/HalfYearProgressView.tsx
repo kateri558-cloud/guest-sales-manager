@@ -10,6 +10,7 @@ import {
 import { formatNumber, formatPercent, formatSignedYen, formatYen, toNumber } from "@/lib/number";
 import {
   buildHalfYearSnapshotList,
+  formatHalfPeriodLabel,
   formatSnapshotDateLabel,
   type HalfYearSnapshotRecord,
   type HalfYearSnapshotListItem,
@@ -38,6 +39,7 @@ const recordToFormFields = (
   record: HalfYearSnapshotRecord
 ): Omit<HalfYearSnapshotFormData, "snapshotDate"> => ({
   fiscalYear: String(record.fiscalYear),
+  halfPeriod: record.halfPeriod ?? "",
   maleQty: String(record.maleQty),
   maleSales: String(record.maleSales),
   femaleQty: String(record.femaleQty),
@@ -96,6 +98,7 @@ export default function HalfYearProgressView() {
           setFormData((prev) => ({
             ...prev,
             fiscalYear: "",
+            halfPeriod: "",
             maleQty: "",
             maleSales: "",
             femaleQty: "",
@@ -118,6 +121,7 @@ export default function HalfYearProgressView() {
       .map((item) => ({
         snapshotDate: item.snapshotDate,
         fiscalYear: item.fiscalYear,
+        halfPeriod: item.halfPeriod,
         maleQty: item.maleQty,
         maleSales: item.maleSales,
         femaleQty: item.femaleQty,
@@ -127,6 +131,7 @@ export default function HalfYearProgressView() {
     const currentRecord: HalfYearSnapshotRecord = {
       snapshotDate: formData.snapshotDate,
       fiscalYear: toNumber(formData.fiscalYear),
+      halfPeriod: formData.halfPeriod === "" ? null : formData.halfPeriod,
       maleQty: toNumber(formData.maleQty),
       maleSales: toNumber(formData.maleSales),
       femaleQty: toNumber(formData.femaleQty),
@@ -144,6 +149,14 @@ export default function HalfYearProgressView() {
     setFormData((prev) => ({ ...prev, snapshotDate: value }));
   };
 
+  const handleHalfPeriodChange = (value: string) => {
+    setSaveResult(null);
+    setFormData((prev) => ({
+      ...prev,
+      halfPeriod: value as HalfYearSnapshotFormData["halfPeriod"],
+    }));
+  };
+
   const handleNumericChange = (field: NumericField, rawValue: string) => {
     setSaveResult(null);
     const sanitized = rawValue.replace(/[^0-9]/g, "");
@@ -152,7 +165,7 @@ export default function HalfYearProgressView() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!formData.snapshotDate || isSaving) return;
+    if (!formData.snapshotDate || !formData.halfPeriod || isSaving) return;
 
     setIsSaving(true);
     setSaveResult(null);
@@ -164,6 +177,7 @@ export default function HalfYearProgressView() {
         body: JSON.stringify({
           snapshotDate: formData.snapshotDate,
           fiscalYear: toNumber(formData.fiscalYear),
+          halfPeriod: formData.halfPeriod,
           maleQty: toNumber(formData.maleQty),
           maleSales: toNumber(formData.maleSales),
           femaleQty: toNumber(formData.femaleQty),
@@ -209,7 +223,7 @@ export default function HalfYearProgressView() {
       <div className={styles.card}>
         <header className={styles.header}>
           <h1 className={styles.title}>参列売上管理</h1>
-          <p className={styles.subtitle}>上期進捗</p>
+          <p className={styles.subtitle}>施工月ベース進捗</p>
           <div className={styles.navLinks}>
             <Link href="/" className={styles.navLink}>
               ← 月次入力へ
@@ -253,6 +267,21 @@ export default function HalfYearProgressView() {
                 value={formData.fiscalYear}
                 onChange={(e) => handleNumericChange("fiscalYear", e.target.value)}
               />
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="halfPeriod">半期</label>
+              <select
+                id="halfPeriod"
+                required
+                value={formData.halfPeriod}
+                onChange={(e) => handleHalfPeriodChange(e.target.value)}
+              >
+                <option value="" disabled>
+                  選択してください
+                </option>
+                <option value="h1">上期</option>
+                <option value="h2">下期</option>
+              </select>
             </div>
           </section>
 
@@ -347,8 +376,16 @@ export default function HalfYearProgressView() {
             <div className={styles.summaryRow}>
               <span className={styles.summaryName}>前回からの増加額</span>
               <span className={styles.summaryValue}>
-                {preview?.increaseFromPrevious != null
-                  ? formatSignedYen(preview.increaseFromPrevious)
+                {preview?.previousSnapshotComparison.diff != null
+                  ? formatSignedYen(preview.previousSnapshotComparison.diff)
+                  : "－"}
+              </span>
+            </div>
+            <div className={styles.summaryRow}>
+              <span className={styles.summaryName}>前回比</span>
+              <span className={styles.summaryValue}>
+                {preview?.previousSnapshotComparison.ratioPercent != null
+                  ? formatPercent(preview.previousSnapshotComparison.ratioPercent)
                   : "－"}
               </span>
             </div>
@@ -409,28 +446,30 @@ export default function HalfYearProgressView() {
                     <span className={styles.snapshotDate}>
                       {formatSnapshotDateLabel(item.snapshotDate)}
                     </span>
-                    <span className={styles.snapshotFiscalYear}>{item.fiscalYear}期</span>
+                    <span className={styles.snapshotFiscalYear}>
+                      {item.fiscalYear}期・{formatHalfPeriodLabel(item.halfPeriod)}
+                    </span>
                   </div>
 
                   <div className={styles.genderGrid}>
                     <div className={styles.genderItem}>
-                      <span className={styles.genderLabel}>男性 着数</span>
+                      <span className={styles.genderLabel}>男性用 着数</span>
                       <span className={styles.genderValue}>
                         {formatNumber(item.maleQty)}件
                       </span>
                     </div>
                     <div className={styles.genderItem}>
-                      <span className={styles.genderLabel}>男性 売上</span>
+                      <span className={styles.genderLabel}>男性用 売上</span>
                       <span className={styles.genderValue}>{formatYen(item.maleSales)}</span>
                     </div>
                     <div className={styles.genderItem}>
-                      <span className={styles.genderLabel}>女性 着数</span>
+                      <span className={styles.genderLabel}>女性用 着数</span>
                       <span className={styles.genderValue}>
                         {formatNumber(item.femaleQty)}件
                       </span>
                     </div>
                     <div className={styles.genderItem}>
-                      <span className={styles.genderLabel}>女性 売上</span>
+                      <span className={styles.genderLabel}>女性用 売上</span>
                       <span className={styles.genderValue}>{formatYen(item.femaleSales)}</span>
                     </div>
                   </div>
@@ -441,6 +480,14 @@ export default function HalfYearProgressView() {
                     <div className={styles.summaryRow}>
                       <span className={styles.summaryName}>合計売上</span>
                       <span className={styles.summaryValue}>{formatYen(item.totalSales)}</span>
+                    </div>
+                    <div className={styles.summaryRow}>
+                      <span className={styles.summaryName}>前回比</span>
+                      <span className={styles.summaryValue}>
+                        {item.previousSnapshotComparison.ratioPercent != null
+                          ? formatPercent(item.previousSnapshotComparison.ratioPercent)
+                          : "－"}
+                      </span>
                     </div>
                     <div className={styles.summaryRow}>
                       <span className={styles.summaryName}>前年同時期比</span>
