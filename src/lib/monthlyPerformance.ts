@@ -1,6 +1,11 @@
 // monthly_performance テーブルとやり取りするための共通の型・変換処理
 // クライアント（フォーム）とサーバー（APIルート）の双方から利用する
 
+import { computeYoY, type YoYComparison } from "@/lib/yoy";
+
+// 他ファイルの import 元を変えずに済むよう、引き続きこのファイルからも参照できるようにする
+export { computeYoY, type YoYComparison };
+
 export interface MonthlyPerformanceRecord {
   /** 対象年月 (YYYY-MM 形式) */
   yearMonth: string;
@@ -115,37 +120,6 @@ export const formatYearMonthLabel = (yearMonth: string): string => {
 export const previousYearMonth = (yearMonth: string): string => {
   const [year, month] = yearMonth.split("-");
   return `${Number(year) - 1}-${month}`;
-};
-
-export interface YoYComparison {
-  /** 前年同月のデータが存在するか */
-  hasPrevious: boolean;
-  /** 前年差 (当年 - 前年)。前年データが無い、または当年・前年のいずれかが未入力の場合はnull */
-  diff: number | null;
-  /** 前年比 (当年 / 前年 * 100)。前年データが無い、未入力、または前年値が0の場合はnull */
-  ratioPercent: number | null;
-}
-
-/**
- * 当年・前年の値から前年差・前年比を計算する。
- * current/previousのどちらかがnull（未入力）、またはpreviousが未登録(undefined)の場合は
- * diff・ratioPercentともにnull（画面では「－」として表示する）。
- */
-export const computeYoY = (
-  current: number | null,
-  previous: number | null | undefined
-): YoYComparison => {
-  if (previous === undefined) {
-    return { hasPrevious: false, diff: null, ratioPercent: null };
-  }
-  if (current === null || previous === null) {
-    return { hasPrevious: true, diff: null, ratioPercent: null };
-  }
-  return {
-    hasPrevious: true,
-    diff: current - previous,
-    ratioPercent: previous === 0 ? null : (current / previous) * 100,
-  };
 };
 
 export interface MonthlyPerformanceListItem extends MonthlyPerformanceRecord {

@@ -26,9 +26,14 @@
   color: var(--muted);
 }
 
-.navLink {
-  display: inline-block;
+.navLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
   margin-top: 12px;
+}
+
+.navLink {
   font-size: 14px;
   font-weight: 600;
   color: var(--accent);

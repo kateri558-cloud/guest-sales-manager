@@ -57,9 +57,14 @@ export default function MonthlyListView() {
         <header className={styles.header}>
           <h1 className={styles.title}>参列売上管理</h1>
           <p className={styles.subtitle}>月別一覧・前年比較</p>
-          <Link href="/" className={styles.navLink}>
-            ← 月次入力へ戻る
-          </Link>
+          <div className={styles.navLinks}>
+            <Link href="/" className={styles.navLink}>
+              ← 月次入力へ戻る
+            </Link>
+            <Link href="/half-year-progress" className={styles.navLink}>
+              上期進捗を見る →
+            </Link>
+          </div>
         </header>
 
         {state.type === "loading" && <p className={styles.statusText}>読み込み中...</p>}
