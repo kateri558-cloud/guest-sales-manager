@@ -103,23 +103,23 @@ export default function MonthlyListView() {
 
                 <div className={styles.genderGrid}>
                   <div className={styles.genderItem}>
-                    <span className={styles.genderLabel}>男性 施工着数</span>
+                    <span className={styles.genderLabel}>男性用 着数</span>
                     <span className={styles.genderValue}>
                       {formatNumber(item.maleCount)}件
                     </span>
                   </div>
                   <div className={styles.genderItem}>
-                    <span className={styles.genderLabel}>男性 施工売上</span>
+                    <span className={styles.genderLabel}>男性用 売上</span>
                     <span className={styles.genderValue}>{formatYen(item.maleSales)}</span>
                   </div>
                   <div className={styles.genderItem}>
-                    <span className={styles.genderLabel}>女性 施工着数</span>
+                    <span className={styles.genderLabel}>女性用 着数</span>
                     <span className={styles.genderValue}>
                       {formatNumber(item.femaleCount)}件
                     </span>
                   </div>
                   <div className={styles.genderItem}>
-                    <span className={styles.genderLabel}>女性 施工売上</span>
+                    <span className={styles.genderLabel}>女性用 売上</span>
                     <span className={styles.genderValue}>{formatYen(item.femaleSales)}</span>
                   </div>
                 </div>
