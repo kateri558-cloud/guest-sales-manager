@@ -161,9 +161,14 @@ export default function MonthlyInputForm() {
         <header className={styles.header}>
           <h1 className={styles.title}>参列売上管理</h1>
           <p className={styles.subtitle}>月次入力</p>
-          <Link href="/monthly-list" className={styles.navLink}>
-            月別一覧を見る →
-          </Link>
+          <div className={styles.navLinks}>
+            <Link href="/monthly-list" className={styles.navLink}>
+              月別一覧を見る →
+            </Link>
+            <Link href="/half-year-progress" className={styles.navLink}>
+              上期進捗を見る →
+            </Link>
+          </div>
         </header>
 
         <form className={styles.form} onSubmit={handleSubmit}>
